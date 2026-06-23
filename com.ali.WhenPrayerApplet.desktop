@@ -1,0 +1,14 @@
+[Desktop Entry]
+Name=When Prayer Times
+Comment=Islamic prayer times from the `when` CLI
+Type=Application
+Exec=when-cosmic-applet
+Terminal=false
+Categories=COSMIC;
+Keywords=COSMIC;Iced;Prayer;Islam;
+Icon=weather-clear-night-symbolic
+StartupNotify=true
+NoDisplay=true
+X-CosmicApplet=true
+X-CosmicHoverPopup=End
+X-OverflowPriority=10
