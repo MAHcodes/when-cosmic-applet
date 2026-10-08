@@ -15,7 +15,7 @@ COSMIC desktop applet that displays Islamic prayer times from the [`when`](https
 git clone https://github.com/MAHcodes/when-cosmic-applet.git
 cd when-cosmic-applet
 cargo build --release
-sudo just install
+just install
 ```
 
 ## Usage
@@ -29,11 +29,12 @@ Once installed, the applet appears in the COSMIC panel. Click the icon to open t
 - Live countdown to next prayer
 - Current prayer period indicator
 - Toggle alarm daemon from the `when` CLI (`when alarm --daemon`)
+- Settings menu inside the popup
 - Settings persist across sessions
 
 ### Settings
 
-From the popup you can toggle:
+Click the gear icon in the popup header to toggle:
 
 | Setting | Description |
 |---|---|

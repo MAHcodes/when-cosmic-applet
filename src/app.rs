@@ -47,10 +47,18 @@ impl Default for Config {
     }
 }
 
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+enum PopupPage {
+    #[default]
+    Main,
+    Settings,
+}
+
 #[derive(Default)]
 pub struct AppModel {
     core: Core,
     popup: Option<Id>,
+    page: PopupPage,
     next_prayer: Option<NextPrayer>,
     all_prayers: Vec<PrayerTime>,
     prayer_date: String,
@@ -65,6 +73,8 @@ pub struct AppModel {
 pub enum Message {
     TogglePopup,
     PopupClosed(Id),
+    OpenSettings,
+    CloseSettings,
     DataUpdated(Option<NextPrayer>, Vec<PrayerTime>),
     SetDate(String),
     Tick,
@@ -183,59 +193,94 @@ impl Application for AppModel {
     fn view_window(&self, _id: Id) -> Element<'_, Self::Message> {
         let mut list = widget::list_column();
 
-        if !self.prayer_date.is_empty() {
-            list = list.add(
-                widget::container(text::body(self.cached_formatted_date.as_str()))
-                    .width(Length::Fill)
-                    .align_x(Alignment::Center)
-                    .padding([0, 0, 8, 0]),
-            );
-        }
+        if self.page == PopupPage::Settings {
+            let back = widget::button::icon(
+                widget::icon::from_name("go-previous-symbolic").symbolic(true),
+            )
+            .on_press(Message::CloseSettings);
 
-        if self.all_prayers.is_empty() {
             list = list.add(
-                widget::settings::item_row(vec![text::body("No prayer times available").into()]),
+                widget::container(widget::settings::item_row(vec![
+                    back.into(),
+                    text::body("Settings").width(Length::Fill).into(),
+                ]))
+                .width(Length::Fill)
+                .padding([0, 0, 8, 0]),
+            );
+
+            list = list.add(
+                settings::item::builder("Show prayer name")
+                    .toggler(self.config.show_name, |_| Message::ToggleShowName),
+            );
+            list = list.add(
+                settings::item::builder("Show prayer time")
+                    .toggler(self.config.show_time && !self.config.show_countdown, |_| {
+                        Message::ToggleShowTime
+                    }),
+            );
+            list = list.add(
+                settings::item::builder("Show countdown")
+                    .toggler(self.config.show_countdown, |_| Message::ToggleShowCountdown),
+            );
+            list = list.add(
+                settings::item::builder("Show current period")
+                    .toggler(self.config.show_current_period, |_| {
+                        Message::ToggleShowCurrentPeriod
+                    }),
+            );
+
+            let alarm_label = if self.alarm_running {
+                "Alarm daemon: running"
+            } else {
+                "Alarm daemon: stopped"
+            };
+            list = list.add(
+                settings::item::builder(alarm_label)
+                    .toggler(self.alarm_running, |_| Message::ToggleAlarm),
             );
         } else {
-            let next_name = self.next_prayer.as_ref().map(|n| n.name.as_str());
-            for prayer in &self.all_prayers {
-                let is_next = next_name == Some(prayer.name.as_str());
-                if is_next {
-                    list = list.add(widget::settings::item_row(vec![
-                        text::body(format!("→ {}", prayer.name))
-                            .width(Length::Fill)
-                            .into(),
-                        text::body(&prayer.time).into(),
-                    ]));
-                } else {
-                    list = list.add(widget::settings::item_row(vec![
-                        text::body(prayer.name.as_str())
-                            .width(Length::Fill)
-                            .into(),
-                        text::body(&prayer.time).into(),
-                    ]));
+            let gear = widget::button::icon(
+                widget::icon::from_name("preferences-system-symbolic").symbolic(true),
+            )
+            .on_press(Message::OpenSettings);
+
+            list = list.add(
+                widget::container(widget::settings::item_row(vec![
+                    text::body(self.cached_formatted_date.as_str())
+                        .width(Length::Fill)
+                        .into(),
+                    gear.into(),
+                ]))
+                .width(Length::Fill)
+                .padding([0, 0, 8, 0]),
+            );
+
+            if self.all_prayers.is_empty() {
+                list = list.add(
+                    widget::settings::item_row(vec![text::body("No prayer times available").into()]),
+                );
+            } else {
+                let next_name = self.next_prayer.as_ref().map(|n| n.name.as_str());
+                for prayer in &self.all_prayers {
+                    let is_next = next_name == Some(prayer.name.as_str());
+                    if is_next {
+                        list = list.add(widget::settings::item_row(vec![
+                            text::body(format!("→ {}", prayer.name))
+                                .width(Length::Fill)
+                                .into(),
+                            text::body(&prayer.time).into(),
+                        ]));
+                    } else {
+                        list = list.add(widget::settings::item_row(vec![
+                            text::body(prayer.name.as_str())
+                                .width(Length::Fill)
+                                .into(),
+                            text::body(&prayer.time).into(),
+                        ]));
+                    }
                 }
             }
         }
-
-        list = list.add(settings::item::builder("Show prayer name")
-            .toggler(self.config.show_name, |_| Message::ToggleShowName));
-        list = list.add(settings::item::builder("Show prayer time")
-            .toggler(self.config.show_time && !self.config.show_countdown, |_| {
-                Message::ToggleShowTime
-            }));
-        list = list.add(settings::item::builder("Show countdown")
-            .toggler(self.config.show_countdown, |_| Message::ToggleShowCountdown));
-        list = list.add(settings::item::builder("Show current period")
-            .toggler(self.config.show_current_period, |_| Message::ToggleShowCurrentPeriod));
-
-        let alarm_label = if self.alarm_running {
-            "Alarm daemon: running"
-        } else {
-            "Alarm daemon: stopped"
-        };
-        list = list.add(settings::item::builder(alarm_label)
-            .toggler(self.alarm_running, |_| Message::ToggleAlarm));
 
         self.core.applet.popup_container(list)
             .max_width(340.0)
@@ -291,6 +336,7 @@ impl Application for AppModel {
         match message {
             Message::TogglePopup => {
                 return if let Some(p) = self.popup.take() {
+                    self.page = PopupPage::Main;
                     destroy_popup(p)
                 } else {
                     let new_id = Id::unique();
@@ -308,7 +354,14 @@ impl Application for AppModel {
             Message::PopupClosed(id) => {
                 if self.popup.as_ref() == Some(&id) {
                     self.popup = None;
+                    self.page = PopupPage::Main;
                 }
+            }
+            Message::OpenSettings => {
+                self.page = PopupPage::Settings;
+            }
+            Message::CloseSettings => {
+                self.page = PopupPage::Main;
             }
             Message::DataUpdated(next, all) => {
                 self.next_prayer = next;
