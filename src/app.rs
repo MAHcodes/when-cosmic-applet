@@ -132,13 +132,9 @@ impl Application for AppModel {
 
         let icon_name = "weather-clear-night-symbolic";
 
-        let icon = widget::icon(
-            widget::icon::from_name(icon_name)
-                .symbolic(true)
-                .into(),
-        )
-        .width(Length::Fixed(18.0))
-        .height(Length::Fixed(18.0));
+        let icon = widget::icon(widget::icon::from_name(icon_name).symbolic(true).into())
+            .width(Length::Fixed(16.0))
+            .height(Length::Fixed(16.0));
 
         let mut parts: Vec<Element<'_, Self::Message>> = vec![icon.into()];
 
@@ -146,12 +142,20 @@ impl Application for AppModel {
             if self.config.show_current_period
                 && let Some(ref current) = self.cached_current_name
             {
-                parts.push(text::body(format!(" {}", current)).into());
-                parts.push(text::body(" →").into());
+                parts.push(
+                    text::body(format!(" {}", current))
+                        .size(10.0)
+                        .into(),
+                );
+                parts.push(text::body("→").size(10.0).into());
             }
 
             if self.config.show_name {
-                parts.push(text::body(format!(" {}", next.name)).into());
+                parts.push(
+                    text::body(format!(" {}", next.name))
+                        .size(10.0)
+                        .into(),
+                );
             }
 
             if self.config.show_countdown {
@@ -160,20 +164,27 @@ impl Application for AppModel {
                     .map(format_remaining)
                     .unwrap_or_default();
                 if !display.is_empty() {
-                    parts.push(text::body(format!(" {}", display)).into());
+                    parts.push(
+                        widget::container(text::body(format!(" {}", display)).size(10.0))
+                            .padding([0.0, 4.0])
+                            .into(),
+                    );
                 }
             } else if self.config.show_time {
-                parts.push(text::body(format!(" {}", next.time)).into());
+                parts.push(
+                    text::body(format!(" {}", next.time))
+                        .size(10.0)
+                        .into(),
+                );
             }
         }
 
         let has_text = parts.len() > 1;
-        let mut row = widget::row::with_children(parts).align_y(Alignment::Center);
-        if has_text {
-            row = row.spacing(2);
-        }
+        let row = widget::row::with_children(parts)
+            .align_y(Alignment::Center)
+            .spacing(if has_text { 4.0 } else { 0.0 });
 
-        let pill_height = h * 0.8;
+        let pill_height = h * 0.85;
         let pill_radius = pill_height / 2.0;
 
         let content = widget::container(row)
@@ -191,7 +202,8 @@ impl Application for AppModel {
     }
 
     fn view_window(&self, _id: Id) -> Element<'_, Self::Message> {
-        let mut list = widget::list_column();
+        let mut list =
+            widget::list_column().style(cosmic::theme::Container::Transparent);
 
         if self.page == PopupPage::Settings {
             let back = widget::button::icon(
@@ -202,10 +214,12 @@ impl Application for AppModel {
             list = list.add(
                 widget::container(widget::settings::item_row(vec![
                     back.into(),
-                    text::body("Settings").width(Length::Fill).into(),
+                    widget::text::heading("Settings")
+                        .width(Length::Fill)
+                        .into(),
                 ]))
                 .width(Length::Fill)
-                .padding([0, 0, 8, 0]),
+                .padding([2, 0, 2, 0]),
             );
 
             list = list.add(
@@ -246,44 +260,50 @@ impl Application for AppModel {
 
             list = list.add(
                 widget::container(widget::settings::item_row(vec![
-                    text::body(self.cached_formatted_date.as_str())
+                    widget::text::heading(self.cached_formatted_date.as_str())
                         .width(Length::Fill)
                         .into(),
                     gear.into(),
                 ]))
                 .width(Length::Fill)
-                .padding([0, 0, 8, 0]),
+                .padding([2, 0, 2, 0]),
             );
 
             if self.all_prayers.is_empty() {
-                list = list.add(
-                    widget::settings::item_row(vec![text::body("No prayer times available").into()]),
-                );
+                list = list.add(widget::settings::item_row(vec![
+                    widget::text::body("No prayer times available").into(),
+                ]));
             } else {
                 let next_name = self.next_prayer.as_ref().map(|n| n.name.as_str());
                 for prayer in &self.all_prayers {
                     let is_next = next_name == Some(prayer.name.as_str());
                     if is_next {
-                        list = list.add(widget::settings::item_row(vec![
-                            text::body(format!("→ {}", prayer.name))
-                                .width(Length::Fill)
-                                .into(),
-                            text::body(&prayer.time).into(),
-                        ]));
+                        list = list.add(
+                            widget::settings::item_row(vec![
+                                widget::text::body(format!("→ {}", prayer.name))
+                                    .width(Length::Fill)
+                                    .into(),
+                                widget::text::body(&prayer.time).into(),
+                            ])
+                            .padding([6, 8]),
+                        );
                     } else {
-                        list = list.add(widget::settings::item_row(vec![
-                            text::body(prayer.name.as_str())
-                                .width(Length::Fill)
-                                .into(),
-                            text::body(&prayer.time).into(),
-                        ]));
+                        list = list.add(
+                            widget::settings::item_row(vec![
+                                widget::text::body(prayer.name.as_str())
+                                    .width(Length::Fill)
+                                    .into(),
+                                widget::text::body(&prayer.time).into(),
+                            ])
+                            .padding([6, 8]),
+                        );
                     }
                 }
             }
         }
 
         self.core.applet.popup_container(list)
-            .max_width(340.0)
+            .max_width(320.0)
             .min_width(260.0)
             .into()
     }
