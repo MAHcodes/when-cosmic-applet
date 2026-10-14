@@ -155,7 +155,6 @@ impl Application for AppModel {
                     text::body(format!(" {}", next.name))
                         .size(10.0)
                         .font(cosmic::font::semibold())
-                        .class(cosmic::theme::Text::Accent)
                         .into(),
                 );
             }
