@@ -281,10 +281,31 @@ impl Application for AppModel {
                     if is_next {
                         list = list.add(
                             widget::settings::item_row(vec![
-                                widget::text::body(format!("→ {}", prayer.name))
-                                    .width(Length::Fill)
-                                    .into(),
-                                widget::text::body(&prayer.time).into(),
+                                widget::row::with_children(vec![
+                                    widget::text::body("→")
+                                        .class(cosmic::theme::Text::Accent)
+                                        .font(cosmic::font::semibold())
+                                        .into(),
+                                    widget::text::body(prayer.name.as_str())
+                                        .class(cosmic::theme::Text::Accent)
+                                        .font(cosmic::font::semibold())
+                                        .into(),
+                                ])
+                                .spacing(4.0)
+                                .width(Length::Fill)
+                                .into(),
+                                widget::row::with_children(vec![
+                                    widget::text::body(&prayer.time)
+                                        .class(cosmic::theme::Text::Accent)
+                                        .font(cosmic::font::semibold())
+                                        .into(),
+                                    widget::text::body("←")
+                                        .class(cosmic::theme::Text::Accent)
+                                        .font(cosmic::font::semibold())
+                                        .into(),
+                                ])
+                                .spacing(4.0)
+                                .into(),
                             ])
                             .padding([6, 8]),
                         );
